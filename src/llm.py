@@ -8,7 +8,6 @@ class LLM:
     def __init__(self):
         # 创建一个OpenAI客户端实例
         openai_api_key = os.environ.get('OPENAI_API_KEY')
-        openai_api_key = "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"
         self.client = OpenAI(api_key=openai_api_key)
         # 从TXT文件加载提示信息
         with open("prompts/report_prompt.txt", "r", encoding='utf-8') as file:
