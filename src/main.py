@@ -2,6 +2,9 @@
 
 import threading
 import shlex
+
+from argparse import ArgumentError
+
 from config import Config
 from scheduler import Scheduler
 from github_client import GitHubClient
@@ -10,7 +13,7 @@ from report_generator import ReportGenerator
 from llm import LLM
 from subscription_manager import SubscriptionManager
 from command_handler import CommandHandler
-from parser import create_parser
+from logger import LOG
 
 
 def run_scheduler(scheduler):
@@ -21,7 +24,7 @@ def main():
     config = Config()
     github_client = GitHubClient(config.github_token)
     notifier = Notifier(config.notification_settings)
-    llm = LLM(config.openai_api_key)
+    llm = LLM()
     report_generator = ReportGenerator(llm)
     subscription_manager = SubscriptionManager(config.subscriptions_file)
     command_handler = CommandHandler(github_client, subscription_manager, report_generator)
@@ -36,37 +39,26 @@ def main():
 
     scheduler_thread = threading.Thread(target=run_scheduler, args=(scheduler,))
     scheduler_thread.daemon = True
-    scheduler_thread.start()
+    # scheduler_thread.start()
 
-    parser = create_parser(command_handler)
+    parser = command_handler.parser
+    command_handler.print_help()
 
     while True:
         try:
             user_input = input("GitHub Sentinel> ")
             if user_input in ['exit', 'quit']:
                 break
-            args = parser.parse_args(shlex.split(user_input))
-            if args.command is None:
-                print("Invalid command. Type 'help' to see the list of available commands.")
-                continue
-            args.func(args)
+            try:
+                args = parser.parse_args(shlex.split(user_input))
+                if args.command is None:
+                    continue
+                args.func(args)
+            except SystemExit as e:
+                LOG.error("Invalid command. Type 'help' to see the list of available commands.")
         except Exception as e:
-            print(f"Error: {e}")
+            LOG.error(f"Unexpected error: {e}")
 
 
 if __name__ == '__main__':
-    print("""
-GitHub Sentinel Command Line Interface
-
-Available commands:
-  add <repo>       Add a subscription (e.g., owner/repo)
-  remove <repo>    Remove a subscription (e.g., owner/repo)
-  list             List all subscriptions
-  fetch            Fetch updates immediately
-  export           Export daily progress (e.g., export <repo>)
-  generate         Generate daily report from markdown file (e.g., generate <file>)
-  help             Show this help message
-  exit             Exit the tool
-  quit             Exit the tool
-""")
     main()
