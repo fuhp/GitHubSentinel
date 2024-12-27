@@ -2,7 +2,7 @@
 
 import threading
 import shlex
-
+import os
 from argparse import ArgumentError
 
 from config import Config
@@ -61,4 +61,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    github_token = os.getenv("GITHUB_TOKEN")
+    print(github_token)
+    # main()
